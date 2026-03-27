@@ -8,19 +8,18 @@ import { db } from "../db/dbConnection.js";
 import { matches } from "../db/schema.js";
 import { getMatchStatus } from "../utils/matchStatus.js";
 import { desc } from "drizzle-orm";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const MAX_LIMIT = 100;
 
-export const createMatch = async (req, res) => {
+export const createMatch = asyncHandler(async (req, res) => {
   const parsed = createMatchSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    return res.status(400).json(new ApiResponse(400, parsed.error.message));
+    return res.status(400).json(new ApiResponse(400, parsed.error.issues, "Invalid start or end time"));
   }
 
-  const {
-    data: { startTime, endTime, homeScore, awayScore },
-  } = parsed;
+  const { startTime, endTime, homeScore, awayScore } = parsed.data;
 
   const [createdMatch] = await db
     .insert(matches)
@@ -39,15 +38,13 @@ export const createMatch = async (req, res) => {
   }
 
   return res.status(201).json(new ApiResponse(201, createdMatch));
-};
+});
 
-export const getMatches = async (req, res) => {
+export const getMatches = asyncHandler(async (req, res) => {
   const parsed = listMatchesQuerySchema.safeParse(req.query);
 
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json(new ApiResponse(400, [], JSON.stringify(parsed.error)));
+    return res.status(400).json(new ApiResponse(400, [], parsed.error.issues));
   }
 
   const limit = Math.min(parsed.data.limit ?? 50, MAX_LIMIT);
@@ -58,9 +55,9 @@ export const getMatches = async (req, res) => {
     .orderBy(desc(matches.createdAt))
     .limit(limit);
 
-  if(!data) {
+  if (!data) {
     throw new ApiError(500, "Failed to get matches");
   }
 
   return res.status(200).json(new ApiResponse(200, data));
-};
+});
