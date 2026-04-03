@@ -7,21 +7,36 @@ function sendJson(socket, payload) {
 }
 
 function broadcast(wss, payload) {
-  
+  let message;
+  try {
+    message = JSON.stringify(payload);
+  } catch (err) {
+    console.error("Failed to serialize broadcast payload:", err);
+    return;
+  }
+
   for (const client of wss.clients) {
     if (client.readyState !== WebSocket.OPEN) continue;
 
-    client.send(JSON.stringify(payload))
-  };
+    try {
+      client.send(message);
+    } catch (err) {
+      console.error("Failed to send to WebSocket client:", err);
+    }
+  }
 }
 
 export function attachWebSocketServer(server) {
-  const wss = new WebSocketServer({ server: server, path: "/ws", maxPayload: 1024 * 1024 });
+  const wss = new WebSocketServer({
+    server: server,
+    path: "/ws",
+    maxPayload: 1024 * 1024,
+  });
 
   wss.on("connection", (socket) => {
     sendJson(socket, {
       type: "Welcome to Sportz wss",
-    })
+    });
   });
 
   wss.on("error", (error) => {
