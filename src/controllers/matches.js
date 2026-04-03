@@ -32,9 +32,14 @@ export const createMatch = asyncHandler(async (req, res) => {
       status: getMatchStatus(startTime, endTime),
     })
     .returning();
+    
 
   if (!createdMatch) {
     throw new ApiError(500, "Failed to create match");
+  }
+
+  if(res.app.locals.broadcastMatchCreated) {
+    res.app.locals.broadcastMatchCreated(createdMatch)
   }
 
   return res.status(201).json(new ApiResponse(201, createdMatch));
